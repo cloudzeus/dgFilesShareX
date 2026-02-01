@@ -1,8 +1,8 @@
-import { auth } from "@/auth";
+import { edgeAuth } from "@/auth.config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const withAuth = auth((req) => {
+const withAuth = edgeAuth((req) => {
   // req.auth is set by Auth.js; authorized callback controls redirects
   return;
 });
