@@ -7,10 +7,19 @@ export const el = {
   appName: "FileShareX",
   appTagline: "Ασφαλής εταιρική κοινοποίηση και διαχείριση αρχείων",
 
-  // Home
+  // Home / Landing
   signedInAs: "Συνδεδεμένος ως",
   goToDashboard: "Μετάβαση στο Πίνακα",
   signIn: "Σύνδεση",
+  landingHero: "Κοινή χρήση αρχείων με ασφάλεια και συμμόρφωση",
+  landingSub: "Διαχειριστείτε αρχεία, τμήματα και κοινοποιήσεις με ενσωματωμένη προστασία δεδομένων και ελέγχους πρόσβασης.",
+  landingFeature1Title: "Ασφαλής κοινοποίηση",
+  landingFeature1Desc: "Εσωτερικές και εξωτερικές κοινοποιήσεις με OTP και λήξη.",
+  landingFeature2Title: "GDPR & προστασία",
+  landingFeature2Desc: "Σήμανση προσωπικών δεδομένων, πολιτικές διατήρησης και απόδειξη διαγραφής.",
+  landingFeature3Title: "Τμήματα & δικαιώματα",
+  landingFeature3Desc: "Δομημένα φάκελοι ανά τμήμα με έλεγχο πρόσβασης.",
+  landingCta: "Είσοδος στην εφαρμογή",
 
   // Login
   loginTitle: "Σύνδεση",

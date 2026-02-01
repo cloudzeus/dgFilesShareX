@@ -36,9 +36,12 @@ function clearSessionAndRedirectToLogin(request: NextRequest): NextResponse {
 export default async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Step 2: /login?clear_session=1 → clear cookies and redirect to /login (never run auth = no loop)
-  if (pathname === "/login" && searchParams.get(CLEAR_SESSION_PARAM) === "1") {
-    return clearSessionAndRedirectToLogin(request);
+  // Never run auth on /login → no redirect loop. Login page handles session via auth().
+  if (pathname === "/login") {
+    if (searchParams.get(CLEAR_SESSION_PARAM) === "1") {
+      return clearSessionAndRedirectToLogin(request);
+    }
+    return NextResponse.next();
   }
 
   try {
@@ -51,7 +54,6 @@ export default async function middleware(request: NextRequest) {
       message.includes("decryption") ||
       message.includes("matching decryption secret")
     ) {
-      // Step 1: redirect to /login?clear_session=1 so next request hits the branch above
       const clearUrl = new URL("/login", request.url);
       clearUrl.searchParams.set(CLEAR_SESSION_PARAM, "1");
       return NextResponse.redirect(clearUrl);
