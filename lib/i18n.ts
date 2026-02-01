@@ -95,6 +95,8 @@ export const el = {
   fileUploadedSuccess: "Το αρχείο μεταφορτώθηκε επιτυχώς.",
   downloadAsZip: "Λήψη φακέλου ως ZIP",
   cancel: "Ακύρωση",
+  openMenu: "Άνοιγμα μενού",
+  closeMenu: "Κλείσιμο μενού",
   malwarePending: "Εκκρεμεί σάρωση",
   malwareClean: "Καθαρό",
   malwareInfected: "Μολυσμένο",
