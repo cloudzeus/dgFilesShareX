@@ -13,7 +13,7 @@
     "lint": "eslint",
     "db:push": "prisma db push",
     "db:seed": "pnpm exec tsx prisma/seed.ts",
-    "release": "prisma db push && prisma db seed"
+    "release": "pnpm run db:push && pnpm run db:seed"
   },
   "prisma": {
     "seed": "pnpm exec tsx prisma/seed.ts"
