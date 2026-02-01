@@ -7,6 +7,20 @@ const withAuth = edgeAuth((req) => {
   return;
 });
 
+/** Clear Auth.js session cookie to stop redirect loop when JWT is invalid. */
+function clearSessionCookieResponse(redirectUrl: URL): NextResponse {
+  const res = NextResponse.redirect(redirectUrl);
+  res.headers.append(
+    "Set-Cookie",
+    "authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax"
+  );
+  res.headers.append(
+    "Set-Cookie",
+    "__Secure-authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax; Secure"
+  );
+  return res;
+}
+
 export default async function middleware(request: NextRequest) {
   try {
     return await withAuth(request as never, {} as never);
@@ -18,7 +32,7 @@ export default async function middleware(request: NextRequest) {
       message.includes("decryption") ||
       message.includes("matching decryption secret")
     ) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return clearSessionCookieResponse(new URL("/login", request.url));
     }
     throw err;
   }
