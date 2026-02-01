@@ -96,7 +96,7 @@ export async function GET(
   const filename = safeFilename(file.name, file.extension);
   const contentType = file.mimeType ?? "application/octet-stream";
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": contentType,

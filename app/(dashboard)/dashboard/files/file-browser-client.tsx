@@ -464,12 +464,10 @@ export function FileBrowserClient() {
             setFeedback({});
             for (let i = 0; i < fileList.length; i++) {
               const file = fileList[i];
-              if (file.kind === "file") {
-                const form = new FormData();
-                form.set("file", file);
-                form.set("folderId", String(currentFolderId));
-                await fetch("/api/files/upload", { method: "POST", body: form });
-              }
+              const form = new FormData();
+              form.set("file", file);
+              form.set("folderId", String(currentFolderId));
+              await fetch("/api/files/upload", { method: "POST", body: form });
             }
             setFeedback({ success: el.fileUploadedSuccess });
             refresh();

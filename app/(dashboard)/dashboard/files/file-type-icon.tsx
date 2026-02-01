@@ -8,14 +8,15 @@ import {
   HiOutlineArchiveBox,
   HiOutlineFolder,
   HiOutlineFolderOpen,
-  type IconType,
 } from "react-icons/hi2";
+
+type FileIconComponent = typeof HiOutlineDocument;
 
 /**
  * Returns the best icon for a file based on extension or mime type.
  * Used for list/grid views and details pane (shadcn/Material style).
  */
-export function getFileIcon(extension?: string | null, mimeType?: string | null): IconType {
+export function getFileIcon(extension?: string | null, mimeType?: string | null): FileIconComponent {
   const ext = (extension ?? "").toLowerCase();
   const mime = (mimeType ?? "").toLowerCase();
 

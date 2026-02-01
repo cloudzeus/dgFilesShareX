@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { el } from "@/lib/i18n";
+import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ApiKeysClient } from "./api-keys-client";
@@ -14,7 +15,7 @@ export default async function ApiKeysPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const where: Parameters<typeof prisma.apiKey.findMany>[0]["where"] = {
+  const where: Prisma.ApiKeyWhereInput = {
     companyId: session.user.companyId,
     OR: [
       { userId: session.user.id },

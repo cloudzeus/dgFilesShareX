@@ -38,7 +38,7 @@ export async function PATCH(
     email?: string;
     password?: string;
     role?: UserRole;
-    departmentId?: number | null;
+    departmentId?: number | string | null;
     isActive?: boolean;
   };
   try {
@@ -52,15 +52,22 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
-  if (body.departmentId != null) {
-    if (body.departmentId === 0 || body.departmentId === "") {
+  if (body.departmentId !== undefined) {
+    const raw = body.departmentId;
+    if (raw === "" || raw === null || raw === 0) {
       (body as { departmentId: null }).departmentId = null;
     } else {
-      const dept = await prisma.department.findFirst({
-        where: { id: Number(body.departmentId), companyId },
-      });
-      if (!dept) {
-        return NextResponse.json({ error: "Department not found or not in company" }, { status: 400 });
+      const deptId = Number(raw);
+      if (Number.isNaN(deptId) || deptId === 0) {
+        (body as { departmentId: null }).departmentId = null;
+      } else {
+        const dept = await prisma.department.findFirst({
+          where: { id: deptId, companyId },
+        });
+        if (!dept) {
+          return NextResponse.json({ error: "Department not found or not in company" }, { status: 400 });
+        }
+        (body as { departmentId: number }).departmentId = deptId;
       }
     }
   }
@@ -90,7 +97,10 @@ export async function PATCH(
     updateData.hashedPassword = await hash(body.password, 10);
   }
   if (body.role !== undefined) updateData.role = body.role;
-  if (body.departmentId !== undefined) updateData.departmentId = body.departmentId ?? null;
+  if (body.departmentId !== undefined) {
+    const d = body.departmentId;
+    updateData.departmentId = d === null || d === "" ? null : Number(d);
+  }
   if (body.isActive !== undefined) updateData.isActive = body.isActive;
 
   const user = await prisma.user.update({
