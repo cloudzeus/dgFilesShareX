@@ -1,10 +1,19 @@
+/**
+ * Seed for FileShareX.
+ * For new deployments: run `pnpm run release` (or `prisma db push && prisma db seed`).
+ *
+ * Deployment Super Admin (always created/updated):
+ *   Email: gkozyris@i4ria.com
+ *   Password: 1f1femsk
+ *   Role: SUPER_ADMIN
+ */
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Company: Acme
+  // Company: Acme (demo)
   const companyAcme = await prisma.company.upsert({
     where: { slug: "acme" },
     update: {},
@@ -56,7 +65,7 @@ async function main() {
     });
   }
 
-  // Company: I4ria + admin user gkozyris@i4ria.com
+  // Deployment Super Admin: gkozyris@i4ria.com / 1f1femsk (SUPER_ADMIN)
   const companyI4ria = await prisma.company.upsert({
     where: { slug: "i4ria" },
     update: {},
@@ -67,17 +76,22 @@ async function main() {
     },
   });
 
-  const hashedAdminPassword = await hash("1f1femsk", 10);
-  const userI4ria = await prisma.user.upsert({
+  const superAdminPassword = await hash("1f1femsk", 10);
+  const superAdminUser = await prisma.user.upsert({
     where: { email: "gkozyris@i4ria.com" },
-    update: { hashedPassword: hashedAdminPassword, role: "SUPER_ADMIN", isActive: true },
+    update: {
+      hashedPassword: superAdminPassword,
+      role: "SUPER_ADMIN",
+      isActive: true,
+      name: "Super Admin",
+    },
     create: {
       email: "gkozyris@i4ria.com",
-      name: "Admin",
+      name: "Super Admin",
       companyId: companyI4ria.id,
       departmentId: null,
       role: "SUPER_ADMIN",
-      hashedPassword: hashedAdminPassword,
+      hashedPassword: superAdminPassword,
       isActive: true,
     },
   });
@@ -93,14 +107,14 @@ async function main() {
         name: "Αρχεία",
         path: "/Αρχεία",
         isDepartmentRoot: false,
-        createdByUserId: userI4ria.id,
+        createdByUserId: superAdminUser.id,
       },
     });
   }
 
   console.log("Seed done.");
-  console.log("  Login (Acme): admin@acme.com / admin123");
-  console.log("  Login (Admin): gkozyris@i4ria.com / 1f1femsk");
+  console.log("  Super Admin (deployment): gkozyris@i4ria.com / 1f1femsk");
+  console.log("  Acme (demo): admin@acme.com / admin123");
 }
 
 main()
