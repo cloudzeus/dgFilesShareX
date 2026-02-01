@@ -2,26 +2,45 @@ import { edgeAuth } from "@/auth.config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const CLEAR_SESSION_PARAM = "clear_session";
+
 const withAuth = edgeAuth((req) => {
   // req.auth is set by Auth.js; authorized callback controls redirects
   return;
 });
 
-/** Clear Auth.js session cookie to stop redirect loop when JWT is invalid. */
-function clearSessionCookieResponse(redirectUrl: URL): NextResponse {
-  const res = NextResponse.redirect(redirectUrl);
-  res.headers.append(
-    "Set-Cookie",
-    "authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax"
-  );
-  res.headers.append(
-    "Set-Cookie",
-    "__Secure-authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax; Secure"
-  );
+/** Build cookie-clear header (same Path/Domain/Secure so browser accepts clear). */
+function clearSessionCookieHeaders(request: NextRequest): [string, string] {
+  const host = request.nextUrl.hostname;
+  const isSecure = request.nextUrl.protocol === "https:";
+  const base = "Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax";
+  const domain = host ? `; Domain=${host}` : "";
+  const secure = isSecure ? "; Secure" : "";
+  return [
+    `authjs.session-token=; ${base}${domain}${secure}`,
+    `__Secure-authjs.session-token=; ${base}${domain}; Secure`,
+  ];
+}
+
+/** Redirect to /login with session cookies cleared (no auth check = no loop). */
+function clearSessionAndRedirectToLogin(request: NextRequest): NextResponse {
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.delete(CLEAR_SESSION_PARAM);
+  const res = NextResponse.redirect(loginUrl);
+  const [cookie1, cookie2] = clearSessionCookieHeaders(request);
+  res.headers.append("Set-Cookie", cookie1);
+  res.headers.append("Set-Cookie", cookie2);
   return res;
 }
 
 export default async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  // Step 2: /login?clear_session=1 → clear cookies and redirect to /login (never run auth = no loop)
+  if (pathname === "/login" && searchParams.get(CLEAR_SESSION_PARAM) === "1") {
+    return clearSessionAndRedirectToLogin(request);
+  }
+
   try {
     return await withAuth(request as never, {} as never);
   } catch (err: unknown) {
@@ -32,7 +51,10 @@ export default async function middleware(request: NextRequest) {
       message.includes("decryption") ||
       message.includes("matching decryption secret")
     ) {
-      return clearSessionCookieResponse(new URL("/login", request.url));
+      // Step 1: redirect to /login?clear_session=1 so next request hits the branch above
+      const clearUrl = new URL("/login", request.url);
+      clearUrl.searchParams.set(CLEAR_SESSION_PARAM, "1");
+      return NextResponse.redirect(clearUrl);
     }
     throw err;
   }
