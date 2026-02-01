@@ -12,7 +12,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "prisma db push",
-    "db:seed": "pnpm exec tsx prisma/seed.ts"
+    "db:seed": "pnpm exec tsx prisma/seed.ts",
+    "release": "prisma db push && prisma db seed"
   },
   "prisma": {
     "seed": "pnpm exec tsx prisma/seed.ts"
@@ -27,7 +28,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-icons": "^5.5.0",
-    "resend": "^4.0.0"
+    "resend": "^4.0.0",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -39,7 +41,6 @@
     "eslint-config-next": "16.1.6",
     "prisma": "^5.22.0",
     "tailwindcss": "^4",
-    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

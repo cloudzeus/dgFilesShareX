@@ -7,6 +7,7 @@ import type { NextAuthConfig } from "next-auth";
  * Used by middleware. Full auth with adapter lives in auth.ts.
  */
 const authConfig = {
+  trustHost: true,
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" as const, maxAge: 30 * 24 * 60 * 60 },
   pages: {

@@ -114,6 +114,8 @@ model Company {
   bunnyStorageZoneName        String?
   bunnyStorageAccessKey       String?
   defaultDataRetentionPolicyId Int?             @unique
+  dpoUserId                   String?           @unique // Υπεύθυνος Προστασίας Δεδομένων (DPO)
+  securityOfficerUserId       String?           @unique // Υπεύθυνος Ασφαλείας Πληροφοριών
 
   departments                 Department[]
   users                       User[]
@@ -130,6 +132,8 @@ model Company {
   updatedAt                   DateTime            @updatedAt
 
   defaultRetentionPolicy      RetentionPolicy?    @relation("CompanyDefaultPolicy", fields: [defaultDataRetentionPolicyId], references: [id])
+  dpo                         User?               @relation("CompanyDPO", fields: [dpoUserId], references: [id], onDelete: SetNull)
+  securityOfficer             User?               @relation("CompanySecurityOfficer", fields: [securityOfficerUserId], references: [id], onDelete: SetNull)
 }
 
 // ============ API Keys (user or department scoped) ============
@@ -189,6 +193,8 @@ model User {
 
   company         Company   @relation(fields: [companyId], references: [id])
   department      Department? @relation(fields: [departmentId], references: [id])
+  companyAsDpo    Company?  @relation("CompanyDPO")
+  companyAsSecurityOfficer Company? @relation("CompanySecurityOfficer")
 
   accounts        Account[]
   sessions        Session[]

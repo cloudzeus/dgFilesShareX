@@ -26,6 +26,8 @@ export async function GET(
     where: { id },
     include: {
       defaultRetentionPolicy: { select: { id: true, name: true, durationDays: true } },
+      dpo: { select: { id: true, name: true, email: true } },
+      securityOfficer: { select: { id: true, name: true, email: true } },
       _count: { select: { users: true, departments: true, files: true, folders: true } },
     },
   });
@@ -78,11 +80,32 @@ export async function PATCH(
     bunnyStorageZoneName?: string | null;
     bunnyStorageAccessKey?: string | null;
     defaultDataRetentionPolicyId?: number | null;
+    dpoUserId?: string | null;
+    securityOfficerUserId?: string | null;
   };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (body.dpoUserId !== undefined && body.dpoUserId !== null) {
+    const dpoUser = await prisma.user.findFirst({
+      where: { id: body.dpoUserId!, companyId: id },
+      select: { id: true },
+    });
+    if (!dpoUser) {
+      return NextResponse.json({ error: "DPO user must belong to this company" }, { status: 400 });
+    }
+  }
+  if (body.securityOfficerUserId !== undefined && body.securityOfficerUserId !== null) {
+    const soUser = await prisma.user.findFirst({
+      where: { id: body.securityOfficerUserId!, companyId: id },
+      select: { id: true },
+    });
+    if (!soUser) {
+      return NextResponse.json({ error: "Security Officer user must belong to this company" }, { status: 400 });
+    }
   }
 
   const updateData: Record<string, unknown> = {};
@@ -95,12 +118,16 @@ export async function PATCH(
   if (body.bunnyStorageZoneName !== undefined) updateData.bunnyStorageZoneName = body.bunnyStorageZoneName?.trim() || null;
   if (body.bunnyStorageAccessKey !== undefined) updateData.bunnyStorageAccessKey = body.bunnyStorageAccessKey === "" ? null : (body.bunnyStorageAccessKey ?? null);
   if (body.defaultDataRetentionPolicyId !== undefined) updateData.defaultDataRetentionPolicyId = body.defaultDataRetentionPolicyId ?? null;
+  if (body.dpoUserId !== undefined) updateData.dpoUserId = body.dpoUserId === "" ? null : body.dpoUserId;
+  if (body.securityOfficerUserId !== undefined) updateData.securityOfficerUserId = body.securityOfficerUserId === "" ? null : body.securityOfficerUserId;
 
   const company = await prisma.company.update({
     where: { id },
     data: updateData,
     include: {
       defaultRetentionPolicy: { select: { id: true, name: true, durationDays: true } },
+      dpo: { select: { id: true, name: true, email: true } },
+      securityOfficer: { select: { id: true, name: true, email: true } },
       _count: { select: { users: true, departments: true, files: true, folders: true } },
     },
   });
@@ -109,7 +136,7 @@ export async function PATCH(
 }
 
 /**
- * DELETE: Delete company. Super Admin only. Only if no users, departments, files, folders.
+ * DELETE: Delete company and all related data (cascade). Super Admin only.
  */
 export async function DELETE(
   _request: Request,
@@ -138,13 +165,39 @@ export async function DELETE(
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
-  if (existing._count.users > 0 || existing._count.departments > 0 || existing._count.files > 0 || existing._count.folders > 0) {
-    return NextResponse.json(
-      { error: "Company has users, departments, files or folders. Remove them first." },
-      { status: 400 }
-    );
-  }
+  await prisma.$transaction(async (tx) => {
+    const shareIds = await tx.fileShare.findMany({ where: { companyId: id }, select: { id: true } }).then((s) => s.map((x) => x.id));
+    if (shareIds.length > 0) {
+      await tx.fileShareAccess.deleteMany({ where: { shareId: { in: shareIds } } });
+    }
+    await tx.fileShare.deleteMany({ where: { companyId: id } });
+    const fileIds = await tx.file.findMany({ where: { companyId: id }, select: { id: true } }).then((f) => f.map((x) => x.id));
+    if (fileIds.length > 0) {
+      await tx.fileClassificationJob.deleteMany({ where: { fileId: { in: fileIds } } });
+      await tx.fileTag.deleteMany({ where: { fileId: { in: fileIds } } });
+      await tx.fileRetention.deleteMany({ where: { fileId: { in: fileIds } } });
+      await tx.file.updateMany({ where: { companyId: id }, data: { deletionProofId: null } });
+    }
+    await tx.erasureProof.deleteMany({ where: { companyId: id } });
+    await tx.file.deleteMany({ where: { companyId: id } });
+    const folderIds = await tx.folder.findMany({ where: { companyId: id }, select: { id: true } }).then((f) => f.map((x) => x.id));
+    if (folderIds.length > 0) {
+      await tx.folderPermission.deleteMany({ where: { folderId: { in: folderIds } } });
+    }
+    await tx.folder.deleteMany({ where: { companyId: id } });
+    await tx.apiKey.deleteMany({ where: { companyId: id } });
+    await tx.department.deleteMany({ where: { companyId: id } });
+    const userIds = await tx.user.findMany({ where: { companyId: id }, select: { id: true } }).then((u) => u.map((x) => x.id));
+    if (userIds.length > 0) {
+      await tx.account.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.session.deleteMany({ where: { userId: { in: userIds } } });
+    }
+    await tx.user.deleteMany({ where: { companyId: id } });
+    await tx.retentionPolicy.deleteMany({ where: { companyId: id } });
+    await tx.auditLog.deleteMany({ where: { companyId: id } });
+    await tx.fileCategory.deleteMany({ where: { companyId: id } });
+    await tx.company.delete({ where: { id } });
+  });
 
-  await prisma.company.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

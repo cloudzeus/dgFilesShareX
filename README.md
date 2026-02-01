@@ -15,6 +15,31 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 Set `RESEND_API_KEY` in `.env` for OTP and transactional emails (Resend). Optionally set `RESEND_FROM` (e.g. `noreply@yourdomain.com`) when using a verified domain.
 
+### Database & first login (deployment)
+
+The app does **not** run database migrations or seeds automatically during build. To have users and data so you can log in:
+
+1. **Option A – Release command (recommended)**  
+   In your host (e.g. Railway), set the **Release Command** to:
+   ```bash
+   pnpm run release
+   ```
+   This runs `prisma db push` and `prisma db seed` before each deploy, so the schema is applied and seed users exist.
+
+2. **Option B – One-time manual**  
+   After the first deploy, with `DATABASE_URL` pointing at your production DB, run locally:
+   ```bash
+   pnpm run db:push
+   pnpm run db:seed
+   ```
+
+Seed creates demo users you can use to log in:
+
+- **Acme:** `admin@acme.com` / `admin123`
+- **Admin:** `gkozyris@i4ria.com` / `1f1femsk`
+
+Change or add users in `prisma/seed.ts` and re-run `pnpm run db:seed` as needed.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
