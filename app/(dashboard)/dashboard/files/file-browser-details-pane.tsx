@@ -1,6 +1,7 @@
 "use client";
 
 import { el } from "@/lib/i18n";
+import { useMemo } from "react";
 import { getFileIcon, HiOutlineFolder } from "./file-type-icon";
 
 function formatBytes(bytes: number): string {
@@ -57,6 +58,16 @@ export function FileBrowserDetailsPane({
   onClearSelection,
 }: Props) {
   const total = selectedFiles.length + selectedFolders.length;
+  const singleFile = total === 1 && selectedFiles.length === 1 ? selectedFiles[0] : null;
+  const singleFolder = total === 1 && selectedFolders.length === 1 ? selectedFolders[0] : null;
+  const fileExt = singleFile?.extension ?? null;
+  const fileMime = singleFile?.mimeType ?? null;
+  /* eslint-disable react-hooks/static-components -- FileIcon from getFileIcon(ext,mime) factory; memoized to avoid recreating each render */
+  const FileIcon = useMemo(
+    () => (singleFile ? getFileIcon(fileExt, fileMime) : HiOutlineFolder),
+    [fileExt, fileMime, singleFile]
+  );
+
   if (total === 0) {
     return (
       <aside className="flex w-64 shrink-0 flex-col border-l border-[var(--outline)] bg-[var(--surface)]">
@@ -76,10 +87,6 @@ export function FileBrowserDetailsPane({
       </aside>
     );
   }
-
-  const singleFile = total === 1 && selectedFiles.length === 1 ? selectedFiles[0] : null;
-  const singleFolder = total === 1 && selectedFolders.length === 1 ? selectedFolders[0] : null;
-  const FileIcon = singleFile ? getFileIcon(singleFile.extension, singleFile.mimeType) : HiOutlineFolder;
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-l border-[var(--outline)] bg-[var(--surface)]">
@@ -106,6 +113,7 @@ export function FileBrowserDetailsPane({
                 <FileIcon className="h-5 w-5" aria-hidden />
               </div>
             </div>
+            {/* eslint-enable react-hooks/static-components */}
             <dl className="space-y-2">
               <div>
                 <dt className="font-medium text-[var(--muted-foreground)]" style={{ fontSize: "var(--text-caption)" }}>

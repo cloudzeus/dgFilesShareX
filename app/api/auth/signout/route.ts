@@ -7,8 +7,7 @@ import { NextResponse } from "next/server";
  * to avoid "Failed to find Server Action" errors when the deployment changes (action IDs change per build).
  */
 export async function POST() {
-  const result = await signOut({ redirectTo: "/" });
-  if (result instanceof Response) return result;
+  await signOut({ redirectTo: "/" });
   const base = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   return NextResponse.redirect(new URL("/", base), { status: 302 });
 }

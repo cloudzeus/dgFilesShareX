@@ -187,10 +187,12 @@ export function FileBrowserSidebar({
     if (currentFolderId == null || tree.length === 0) return;
     const path = pathToFolderId(tree, currentFolderId);
     if (path) {
-      setExpandedIds((prev) => {
-        const next = new Set(prev);
-        path.slice(0, -1).forEach((id) => next.add(id)); // expand ancestors only
-        return next;
+      queueMicrotask(() => {
+        setExpandedIds((prev) => {
+          const next = new Set(prev);
+          path.slice(0, -1).forEach((id) => next.add(id)); // expand ancestors only
+          return next;
+        });
       });
     }
   }, [currentFolderId, tree]);

@@ -451,7 +451,15 @@ export function FileBrowserClient() {
         </nav>
 
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--outline)] bg-[var(--card)] px-3 py-2">
-          <FileBrowserToolbar folderId={currentFolderId} onRefresh={refresh} onUploadRequest={uploadFiles} />
+          <FileBrowserToolbar
+            folderId={currentFolderId}
+            onRefresh={refresh}
+            onUploadRequest={
+              currentFolderId != null
+                ? (files) => uploadFiles(files, currentFolderId)
+                : undefined
+            }
+          />
           <div className="ml-auto flex items-center gap-0.5 rounded-md border border-[var(--outline)] bg-[var(--surface)] p-0.5">
             <button
               type="button"

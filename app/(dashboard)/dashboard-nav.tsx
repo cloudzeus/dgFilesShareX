@@ -48,8 +48,11 @@ export function DashboardNav({ isSuperAdmin = false }: { isSuperAdmin?: boolean 
   const isReportsPath = pathname.startsWith("/dashboard/reports");
   const [reportsOpen, setReportsOpen] = useState(isReportsPath);
 
+  // Keep reports section open when user navigates to a reports subpage
   useEffect(() => {
-    if (isReportsPath && !reportsOpen) setReportsOpen(true);
+    if (isReportsPath && !reportsOpen) {
+      queueMicrotask(() => setReportsOpen(true));
+    }
   }, [isReportsPath, reportsOpen]);
 
   const linkClass = (href: string) => {

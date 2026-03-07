@@ -26,10 +26,10 @@ function useIsMd() {
   const [isMd, setIsMd] = useState(true);
   useEffect(() => {
     const m = window.matchMedia("(min-width: 768px)");
-    setIsMd(m.matches);
-    const listener = () => setIsMd(m.matches);
-    m.addEventListener("change", listener);
-    return () => m.removeEventListener("change", listener);
+    const update = () => setIsMd(m.matches);
+    queueMicrotask(update); // initial value after mount
+    m.addEventListener("change", update);
+    return () => m.removeEventListener("change", update);
   }, []);
   return isMd;
 }
@@ -41,7 +41,7 @@ export function DashboardShell({ session, isSuperAdmin, children }: Props) {
 
   // Close mobile menu when route changes (e.g. after clicking a nav link)
   useEffect(() => {
-    setMobileMenuOpen(false);
+    queueMicrotask(() => setMobileMenuOpen(false));
   }, [pathname]);
 
   // Prevent body scroll when mobile menu is open
