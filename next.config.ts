@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    // Allow large file uploads up to 1GB (e.g. /api/files/upload).
+    proxyClientMaxBodySize: "1gb",
+  },
 };
 
 export default nextConfig;

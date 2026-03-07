@@ -9,7 +9,7 @@ import { createAuditLog } from "@/lib/audit";
 import { EventType, TargetType } from "@prisma/client";
 import { randomUUID } from "crypto";
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 export async function POST(req: Request) {
   const session = await auth();

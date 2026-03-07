@@ -1,6 +1,5 @@
 "use client";
 
-import { signOutAction } from "@/app/actions";
 import { el, roleLabel } from "@/lib/i18n";
 import Image from "next/image";
 import Link from "next/link";
@@ -94,7 +93,7 @@ export function DashboardShell({ session, isSuperAdmin, children }: Props) {
         </div>
         <DashboardNav isSuperAdmin={isSuperAdmin} />
         <div className="border-t border-[var(--outline)] p-2">
-          <form action={signOutAction}>
+          <form action="/api/auth/signout" method="POST">
             <button
               type="submit"
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[var(--foreground)]/70 transition hover:bg-[var(--surface-variant)] hover:text-[var(--foreground)]"

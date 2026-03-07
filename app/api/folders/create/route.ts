@@ -11,6 +11,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const companyId = session.user.companyId;
+  if (typeof companyId !== "number" || companyId < 1) {
+    return NextResponse.json(
+      { error: "No company associated with your account. Cannot create folders." },
+      { status: 403 }
+    );
+  }
+
   let body: { parentFolderId?: number | null; name?: string };
   try {
     body = await req.json();
@@ -30,7 +38,7 @@ export async function POST(req: Request) {
   const user = {
     id: session.user.id,
     role: session.user.role,
-    companyId: session.user.companyId,
+    companyId,
     departmentId: session.user.departmentId,
   };
 
@@ -39,7 +47,7 @@ export async function POST(req: Request) {
     const parent = await prisma.folder.findUnique({
       where: { id: parentId },
     });
-    if (!parent || parent.companyId !== session.user.companyId) {
+    if (!parent || parent.companyId !== companyId) {
       return NextResponse.json({ error: "Parent folder not found" }, { status: 404 });
     }
     if (!canWriteFolder(user, parent)) {
@@ -51,7 +59,7 @@ export async function POST(req: Request) {
   const path = `${parentPath}${name}`;
   const existing = await prisma.folder.findFirst({
     where: {
-      companyId: session.user.companyId,
+      companyId,
       parentFolderId: parentId,
       name,
     },
@@ -62,7 +70,7 @@ export async function POST(req: Request) {
 
   const folder = await prisma.folder.create({
     data: {
-      companyId: session.user.companyId,
+      companyId,
       parentFolderId: parentId,
       name,
       path,
@@ -72,7 +80,7 @@ export async function POST(req: Request) {
   });
 
   await createAuditLog({
-    companyId: session.user.companyId,
+    companyId,
     actorUserId: session.user.id,
     eventType: EventType.FILE_MOVE,
     targetType: TargetType.FOLDER,

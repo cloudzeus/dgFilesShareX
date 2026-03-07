@@ -16,6 +16,8 @@ import { DeleteFolderButton } from "./delete-folder-button";
 import { FolderPermissionsDialog } from "./folder-permissions-dialog";
 import { MoveToFolderDialog } from "./move-to-folder-dialog";
 import { AssignPolicyDialog } from "./assign-policy-dialog";
+import { UploadProgressModal, type UploadProgressState } from "./upload-progress-modal";
+import { uploadFileWithProgress } from "@/lib/upload-with-progress";
 
 const VIEW_STORAGE_KEY = "filesharex-view-mode";
 
@@ -126,6 +128,13 @@ export function FileBrowserClient() {
   const [shareDialogFileId, setShareDialogFileId] = useState<number | null>(null);
   const [editingFileId, setEditingFileId] = useState<number | null>(null);
   const [assignPolicyTarget, setAssignPolicyTarget] = useState<{ type: "file" | "folder"; id: number; name: string } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressState>({
+    open: false,
+    currentFileName: "",
+    currentIndex: 0,
+    total: 0,
+    progressPercent: 0,
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem(VIEW_STORAGE_KEY);
@@ -170,6 +179,54 @@ export function FileBrowserClient() {
     loadContents();
     router.refresh();
   }, [loadTree, loadContents, router]);
+
+  const uploadFiles = useCallback(
+    async (files: File[], folderId: number) => {
+      if (!files.length || folderId == null) return;
+      setFeedback({});
+      setUploadProgress({
+        open: true,
+        currentFileName: files[0]?.name ?? "",
+        currentIndex: 0,
+        total: files.length,
+        progressPercent: 0,
+      });
+      let lastError: string | undefined;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress((p) => ({ ...p, currentFileName: file.name, currentIndex: i, progressPercent: 0 }));
+        const result = await uploadFileWithProgress(file, folderId, (loaded, total) => {
+          setUploadProgress((p) => ({
+            ...p,
+            currentFileName: file.name,
+            currentIndex: i,
+            progressPercent: total > 0 ? Math.round((loaded / total) * 100) : 0,
+          }));
+        });
+        if (!result.ok) {
+          lastError = result.error;
+          setUploadProgress((p) => ({ ...p, error: result.error, done: true }));
+          break;
+        }
+      }
+      setUploadProgress((p) => ({
+        ...p,
+        progressPercent: 100,
+        currentIndex: files.length,
+        done: true,
+        error: lastError,
+      }));
+      if (!lastError) {
+        setFeedback({ success: el.fileUploadedSuccess });
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
+  const closeUploadModal = useCallback(() => {
+    setUploadProgress((p) => ({ ...p, open: false }));
+  }, []);
 
   const clearSelection = useCallback(() => {
     setSelectedFileIds(new Set());
@@ -394,7 +451,7 @@ export function FileBrowserClient() {
         </nav>
 
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--outline)] bg-[var(--card)] px-3 py-2">
-          <FileBrowserToolbar folderId={currentFolderId} onRefresh={refresh} />
+          <FileBrowserToolbar folderId={currentFolderId} onRefresh={refresh} onUploadRequest={uploadFiles} />
           <div className="ml-auto flex items-center gap-0.5 rounded-md border border-[var(--outline)] bg-[var(--surface)] p-0.5">
             <button
               type="button"
@@ -434,17 +491,8 @@ export function FileBrowserClient() {
                 onChange={async (e) => {
                   const fileList = e.target.files;
                   if (!fileList?.length || currentFolderId == null) return;
-                  setFeedback({});
-                  for (let i = 0; i < fileList.length; i++) {
-                    const file = fileList[i];
-                    const form = new FormData();
-                    form.set("file", file);
-                    form.set("folderId", String(currentFolderId));
-                    await fetch("/api/files/upload", { method: "POST", body: form });
-                  }
+                  await uploadFiles(Array.from(fileList), currentFolderId);
                   e.target.value = "";
-                  setFeedback({ success: el.fileUploadedSuccess });
-                  refresh();
                 }}
               />
             </label>
@@ -461,16 +509,7 @@ export function FileBrowserClient() {
             const fileList = e.dataTransfer.files;
             if (!fileList?.length) return;
             e.preventDefault();
-            setFeedback({});
-            for (let i = 0; i < fileList.length; i++) {
-              const file = fileList[i];
-              const form = new FormData();
-              form.set("file", file);
-              form.set("folderId", String(currentFolderId));
-              await fetch("/api/files/upload", { method: "POST", body: form });
-            }
-            setFeedback({ success: el.fileUploadedSuccess });
-            refresh();
+            await uploadFiles(Array.from(fileList), currentFolderId);
           }}
         >
           {loading ? (
@@ -718,6 +757,8 @@ export function FileBrowserClient() {
           />
         );
       })()}
+
+      <UploadProgressModal state={uploadProgress} onClose={closeUploadModal} />
     </div>
   );
 }

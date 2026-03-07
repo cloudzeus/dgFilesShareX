@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { canViewAudit } from "@/lib/rbac";
 import { el } from "@/lib/i18n";
 import { redirect } from "next/navigation";
 
@@ -10,20 +9,10 @@ export default async function ReportsDownloadsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const canView = canViewAudit(
-    {
-      id: session.user.id,
-      role: session.user.role,
-      companyId: session.user.companyId,
-      departmentId: session.user.departmentId,
-    },
-    "company"
-  );
-
   const companyId = session.user.companyId;
   const hasCompany = typeof companyId === "number" && companyId > 0;
 
-  const accesses = canView && hasCompany
+  const accesses = hasCompany
     ? await prisma.fileShareAccess.findMany({
         where: {
           share: { companyId },
@@ -48,7 +37,7 @@ export default async function ReportsDownloadsPage() {
         </p>
       </div>
 
-      {canView ? (
+      {hasCompany ? (
         <section className="rounded-xl border border-[var(--outline)] bg-[var(--card)]">
           <div className="border-b border-[var(--outline)] px-4 py-4 md:px-6">
             <h2 className="font-semibold tracking-tight text-[var(--card-foreground)]" style={{ fontSize: "var(--text-h6)" }}>
@@ -91,7 +80,7 @@ export default async function ReportsDownloadsPage() {
       ) : (
         <div className="rounded-xl border border-[var(--outline)] bg-[var(--card)] p-8 text-center">
           <p className="font-medium text-[var(--foreground)]" style={{ fontSize: "var(--text-body1)" }}>
-            {el.reportsNoAuditAccess}
+            {el.reportsNoCompanyAccess}
           </p>
         </div>
       )}

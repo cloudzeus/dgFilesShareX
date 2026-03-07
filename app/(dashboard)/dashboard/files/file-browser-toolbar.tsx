@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { HiOutlineFolderPlus, HiOutlineArrowUpTray, HiOutlineArchiveBox } from "react-icons/hi2";
 
-type Props = { folderId: number | null; onRefresh?: () => void };
+type Props = { folderId: number | null; onRefresh?: () => void; onUploadRequest?: (files: File[]) => void };
 
-export function FileBrowserToolbar({ folderId, onRefresh }: Props) {
+export function FileBrowserToolbar({ folderId, onRefresh, onUploadRequest }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const refresh = () => {
@@ -46,10 +46,16 @@ export function FileBrowserToolbar({ folderId, onRefresh }: Props) {
   }
 
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || folderId === null) return;
+    const fileList = e.target.files;
+    if (!fileList?.length || folderId === null) return;
+    e.target.value = "";
     clearFeedback();
     setError(null);
+    if (onUploadRequest) {
+      onUploadRequest(Array.from(fileList));
+      return;
+    }
+    const file = fileList[0];
     const form = new FormData();
     form.set("file", file);
     form.set("folderId", String(folderId));
@@ -59,7 +65,6 @@ export function FileBrowserToolbar({ folderId, onRefresh }: Props) {
       setError(data.error ?? "Σφάλμα μεταφόρτωσης");
       return;
     }
-    e.target.value = "";
     setSuccess(el.fileUploadedSuccess);
     refresh();
   }
@@ -114,7 +119,7 @@ export function FileBrowserToolbar({ folderId, onRefresh }: Props) {
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--outline)] bg-[var(--surface)] px-3 py-1.5 font-medium text-[var(--foreground)] transition hover:bg-[var(--muted)] disabled:opacity-50 [&_svg]:text-[var(--foreground)]/80" style={{ fontSize: "var(--text-caption)" }}>
             <HiOutlineArrowUpTray className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {el.uploadFile}
-            <input type="file" className="hidden" onChange={upload} disabled={isPending} />
+            <input type="file" className="hidden" multiple={!!onUploadRequest} onChange={upload} disabled={isPending} />
           </label>
           <a
             href={`/api/folders/${folderId}/download-zip`}

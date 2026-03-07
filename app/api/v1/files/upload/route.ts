@@ -12,7 +12,7 @@ import {
   apiKeyContextToSessionUser,
 } from "@/lib/api-key-auth";
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 export async function POST(req: Request) {
   const rawKey = getApiKeyFromRequest(req);
