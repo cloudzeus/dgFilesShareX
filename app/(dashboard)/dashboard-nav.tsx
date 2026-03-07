@@ -17,6 +17,7 @@ import {
   HiOutlineChevronRight,
   HiOutlineChevronDown,
   HiOutlineDocumentText,
+  HiOutlineUserGroup,
 } from "react-icons/hi2";
 
 const reportSubLinks = [
@@ -42,8 +43,9 @@ const baseNavLinksAfterReports = [
 ];
 
 const companiesNavLink = { href: "/dashboard/companies", label: el.companiesTitle, Icon: HiOutlineBuildingOffice2 };
+const employeesNavLink = { href: "/dashboard/users", label: el.navEmployees, Icon: HiOutlineUserGroup };
 
-export function DashboardNav({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
+export function DashboardNav({ isSuperAdmin = false, showEmployeesLink = false }: { isSuperAdmin?: boolean; showEmployeesLink?: boolean }) {
   const pathname = usePathname();
   const isReportsPath = pathname.startsWith("/dashboard/reports");
   const [reportsOpen, setReportsOpen] = useState(isReportsPath);
@@ -72,6 +74,17 @@ export function DashboardNav({ isSuperAdmin = false }: { isSuperAdmin?: boolean 
           <span>{label}</span>
         </Link>
       ))}
+
+      {showEmployeesLink && (
+        <Link
+          href={employeesNavLink.href}
+          className={linkClass(employeesNavLink.href)}
+          style={{ fontSize: "var(--text-body2)" }}
+        >
+          <employeesNavLink.Icon className="h-5 w-5 shrink-0 opacity-80" aria-hidden />
+          <span>{employeesNavLink.label}</span>
+        </Link>
+      )}
 
       {/* Expandable Reports group */}
       <div className="space-y-0.5">

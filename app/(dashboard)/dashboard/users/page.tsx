@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { el } from "@/lib/i18n";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { UsersClient } from "./users-client";
 
 function canManageUsers(role: string): boolean {
@@ -66,6 +67,13 @@ export default async function UsersPage() {
         <p className="text-[var(--muted-foreground)]" style={{ fontSize: "var(--text-body2)" }}>
           {el.employeesDescription}
         </p>
+        <Link
+          href="/dashboard/departments"
+          className="mt-1 inline-flex items-center gap-1 text-[var(--primary)] transition hover:underline"
+          style={{ fontSize: "var(--text-caption)" }}
+        >
+          {el.navDepartments} →
+        </Link>
       </div>
 
       <UsersClient

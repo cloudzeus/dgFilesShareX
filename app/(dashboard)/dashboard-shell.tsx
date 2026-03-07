@@ -91,7 +91,10 @@ export function DashboardShell({ session, isSuperAdmin, children }: Props) {
             <HiOutlineXMark className="h-6 w-6" aria-hidden />
           </button>
         </div>
-        <DashboardNav isSuperAdmin={isSuperAdmin} />
+        <DashboardNav
+          isSuperAdmin={isSuperAdmin}
+          showEmployeesLink={session.user.role === "SUPER_ADMIN" || session.user.role === "COMPANY_ADMIN"}
+        />
         <div className="border-t border-[var(--outline)] p-2">
           <form action="/api/auth/signout" method="POST">
             <button

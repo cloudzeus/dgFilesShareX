@@ -9,9 +9,10 @@ import {
   HiOutlineChartBar,
   HiOutlineShieldCheck,
   HiOutlineKey,
+  HiOutlineUserGroup,
 } from "react-icons/hi2";
 
-const quickLinks = [
+const baseQuickLinks = [
   { href: "/dashboard/files", label: el.filesTitle, desc: el.filesDescription, Icon: HiOutlineFolder },
   { href: "/dashboard/departments", label: el.departmentsTitle, desc: el.departmentsDescription, Icon: HiOutlineBuildingOffice },
   { href: "/dashboard/shares", label: el.navMyShares, desc: el.mySharesDescription, Icon: HiOutlineLink },
@@ -24,6 +25,14 @@ export default async function DashboardPage() {
   const session = await auth();
   const displayName = session?.user?.name ?? session?.user?.email ?? "";
   const role = session?.user?.role ? roleLabel(session.user.role) : "";
+  const canManageUsers = session?.user?.role === "SUPER_ADMIN" || session?.user?.role === "COMPANY_ADMIN";
+  const quickLinks = [
+    ...baseQuickLinks.slice(0, 2),
+    ...(canManageUsers
+      ? [{ href: "/dashboard/users", label: el.employeesTitle, desc: el.employeesDescription, Icon: HiOutlineUserGroup }]
+      : []),
+    ...baseQuickLinks.slice(2),
+  ];
 
   const [fileCount, folderCount] =
     session?.user?.companyId != null

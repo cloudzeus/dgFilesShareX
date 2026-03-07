@@ -3,6 +3,7 @@
 import { el } from "@/lib/i18n";
 import { roleLabel } from "@/lib/i18n";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { HiOutlineUserGroup, HiOutlineBuildingOffice, HiOutlinePlus, HiOutlineBuildingOffice2, HiOutlineShieldCheck } from "react-icons/hi2";
 import { AdminEmployeeModal } from "./admin-employee-modal";
@@ -40,6 +41,7 @@ type Props = {
 };
 
 export function DashboardAdminSidebar({ companyId, userId }: Props) {
+  const pathname = usePathname();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [departments, setDepartments] = useState<DepartmentRow[]>([]);
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
@@ -79,7 +81,7 @@ export function DashboardAdminSidebar({ companyId, userId }: Props) {
 
   useEffect(() => {
     load();
-  }, [companyId]);
+  }, [companyId, pathname]);
 
   return (
     <>

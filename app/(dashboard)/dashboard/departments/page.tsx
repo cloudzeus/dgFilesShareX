@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { el } from "@/lib/i18n";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { DepartmentsClient } from "./departments-client";
 
 function canManageDepartments(role: string): boolean {
@@ -47,6 +48,15 @@ export default async function DepartmentsPage() {
         <p className="text-[var(--muted-foreground)]" style={{ fontSize: "var(--text-body2)" }}>
           {el.departmentsListDescription}
         </p>
+        {canManageDepartments(session.user.role) && (
+          <Link
+            href="/dashboard/users"
+            className="mt-1 inline-flex items-center gap-1 text-[var(--primary)] transition hover:underline"
+            style={{ fontSize: "var(--text-caption)" }}
+          >
+            {el.navEmployees} →
+          </Link>
+        )}
       </div>
 
       <section className="rounded-xl border border-[var(--outline)] bg-[var(--card)]">
