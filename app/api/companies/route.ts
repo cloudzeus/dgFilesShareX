@@ -20,6 +20,7 @@ export async function GET() {
       id: true,
       name: true,
       slug: true,
+      isDefault: true,
       country: true,
       address: true,
       afm: true,

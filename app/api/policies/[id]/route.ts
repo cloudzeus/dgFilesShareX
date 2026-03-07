@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canManagePolicies } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 
 export async function PATCH(
   req: Request,
@@ -22,6 +23,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "No company context" }, { status: 403 });
+  }
+
   const id = Number((await params).id);
   if (Number.isNaN(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
@@ -35,7 +41,7 @@ export async function PATCH(
   }
 
   const policy = await prisma.retentionPolicy.findFirst({
-    where: { id, companyId: session.user.companyId },
+    where: { id, companyId },
   });
   if (!policy) {
     return NextResponse.json({ error: "Policy not found" }, { status: 404 });
@@ -83,13 +89,18 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "No company context" }, { status: 403 });
+  }
+
   const id = Number((await params).id);
   if (Number.isNaN(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
 
   const policy = await prisma.retentionPolicy.findFirst({
-    where: { id, companyId: session.user.companyId },
+    where: { id, companyId },
     include: { fileRetentions: { take: 1 } },
   });
   if (!policy) {

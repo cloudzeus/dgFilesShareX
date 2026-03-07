@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { el } from "@/lib/i18n";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import { DepartmentsClient } from "./departments-client";
 
 function canManageDepartments(role: string): boolean {
@@ -13,11 +14,11 @@ export default async function DepartmentsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const companyId = session.user.companyId;
-  const hasCompany = typeof companyId === "number" && companyId > 0;
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) redirect("/dashboard");
 
   const departments = await prisma.department.findMany({
-    where: hasCompany ? { companyId } : { companyId: 0 },
+    where: { companyId },
     orderBy: { name: "asc" },
     include: {
       _count: {

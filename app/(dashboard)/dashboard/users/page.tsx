@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { el } from "@/lib/i18n";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import { UsersClient } from "./users-client";
 
 function canManageUsers(role: string): boolean {
@@ -14,49 +15,74 @@ export default async function UsersPage() {
   if (!session?.user?.id) redirect("/login");
   if (!canManageUsers(session.user.role)) redirect("/dashboard");
 
-  const companyId = session.user.companyId;
-  const hasCompany = typeof companyId === "number" && companyId > 0;
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) redirect("/dashboard");
 
-  const [users, departments] = await Promise.all([
-    hasCompany
-      ? prisma.user.findMany({
-          where: { companyId },
-          orderBy: [{ name: "asc" }, { email: "asc" }],
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            departmentId: true,
-            isActive: true,
-            department: { select: { id: true, name: true } },
-          },
-        })
-      : [],
-    hasCompany
-      ? prisma.department.findMany({
-          where: { companyId },
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+
+  const [users, departments, companies] = await Promise.all([
+    prisma.user.findMany({
+      where: { companyId },
+      orderBy: [{ name: "asc" }, { email: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        departmentId: true,
+        isActive: true,
+        companyId: true,
+        department: { select: { id: true, name: true } },
+        company: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.department.findMany({
+      where: { companyId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, description: true },
+    }),
+    isSuperAdmin
+      ? prisma.company.findMany({
           orderBy: { name: "asc" },
-          select: { id: true, name: true, description: true },
+          select: { id: true, name: true },
         })
-      : [],
+      : Promise.resolve([]),
   ]);
 
-  const userRows = users.map((u) => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    role: u.role,
-    departmentId: u.departmentId,
-    isActive: u.isActive,
-    department: u.department,
-  }));
+  const userRows = users.map((u) => {
+    const row: {
+      id: string;
+      name: string | null;
+      email: string | null;
+      role: string;
+      departmentId: number | null;
+      isActive: boolean;
+      department: { id: number; name: string } | null;
+      companyId?: number;
+      company?: { id: number; name: string };
+    } = {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      departmentId: u.departmentId,
+      isActive: u.isActive,
+      department: u.department,
+    };
+    if (isSuperAdmin) {
+      row.companyId = u.companyId;
+      row.company = u.company;
+    }
+    return row;
+  });
 
   const deptRows = departments.map((d) => ({
     id: d.id,
     name: d.name,
     description: d.description,
   }));
+
+  const companyRows = companies.map((c) => ({ id: c.id, name: c.name }));
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-6 md:py-6">
@@ -79,6 +105,9 @@ export default async function UsersPage() {
       <UsersClient
         users={userRows}
         departments={deptRows}
+        companies={companyRows}
+        isSuperAdmin={isSuperAdmin}
+        defaultCompanyId={companyId}
         currentUserId={session.user.id}
       />
     </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { el, roleLabel } from "@/lib/i18n";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import {
   HiOutlineFolder,
   HiOutlineBuildingOffice,
@@ -34,14 +35,15 @@ export default async function DashboardPage() {
     ...baseQuickLinks.slice(2),
   ];
 
+  const companyId = session ? await getEffectiveCompanyIdForMainFeatures(session) : null;
   const [fileCount, folderCount] =
-    session?.user?.companyId != null
+    companyId != null
       ? await Promise.all([
           prisma.file.count({
-            where: { companyId: session.user.companyId, deletionStatus: "ACTIVE" },
+            where: { companyId, deletionStatus: "ACTIVE" },
           }),
           prisma.folder.count({
-            where: { companyId: session.user.companyId },
+            where: { companyId },
           }),
         ])
       : [0, 0];

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import type { UserRole } from "@prisma/client";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 
 function canManageUsers(role: string): boolean {
   return role === "SUPER_ADMIN" || role === "COMPANY_ADMIN";
@@ -19,7 +20,10 @@ export async function GET() {
   if (!canManageUsers(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const companyId = session.user.companyId as number;
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const users = await prisma.user.findMany({
     where: { companyId },
@@ -31,16 +35,31 @@ export async function GET() {
       role: true,
       departmentId: true,
       isActive: true,
+      companyId: true,
       department: { select: { id: true, name: true } },
+      company: { select: { id: true, name: true } },
     },
   });
 
-  return NextResponse.json({ users });
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const serialized = users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    departmentId: u.departmentId,
+    isActive: u.isActive,
+    department: u.department,
+    ...(isSuperAdmin ? { companyId: u.companyId, company: u.company } : {}),
+  }));
+
+  return NextResponse.json({ users: serialized });
 }
 
 /**
  * POST: Create a new user (employee). Super Admin / Company Admin only.
- * Body: { name?, email, password, role, departmentId? }
+ * Body: { name?, email, password, role, departmentId?, companyId? }
+ * companyId only allowed for SUPER_ADMIN (default company used otherwise).
  */
 export async function POST(request: Request) {
   const session = await auth();
@@ -50,9 +69,12 @@ export async function POST(request: Request) {
   if (!canManageUsers(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const companyId = session.user.companyId as number;
+  let companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  let body: { name?: string; email: string; password: string; role: UserRole; departmentId?: number | null };
+  let body: { name?: string; email: string; password: string; role: UserRole; departmentId?: number | null; companyId?: number };
   try {
     body = await request.json();
   } catch {
@@ -62,6 +84,17 @@ export async function POST(request: Request) {
   const { email, password, role, name, departmentId } = body;
   if (!email || typeof email !== "string" || !password || typeof password !== "string") {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+  }
+
+  if (session.user.role === "SUPER_ADMIN" && body.companyId != null) {
+    const companyExists = await prisma.company.findUnique({
+      where: { id: body.companyId },
+      select: { id: true },
+    });
+    if (!companyExists) {
+      return NextResponse.json({ error: "Company not found" }, { status: 400 });
+    }
+    companyId = body.companyId;
   }
 
   const validRoles: UserRole[] = ["EMPLOYEE", "DEPARTMENT_MANAGER", "COMPANY_ADMIN", "AUDITOR", "DPO"];

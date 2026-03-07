@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canManagePolicies } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import { el } from "@/lib/i18n";
 import { redirect } from "next/navigation";
 import { PoliciesClient } from "./policies-client";
@@ -9,15 +10,18 @@ export default async function PoliciesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) redirect("/dashboard");
+
   const canManage = canManagePolicies({
     id: session.user.id,
     role: session.user.role,
-    companyId: session.user.companyId,
-    departmentId: session.user.departmentId,
+    companyId: session.user.companyId ?? 0,
+    departmentId: session.user.departmentId ?? null,
   });
 
   const policies = await prisma.retentionPolicy.findMany({
-    where: { companyId: session.user.companyId },
+    where: { companyId },
     orderBy: { name: "asc" },
   });
 

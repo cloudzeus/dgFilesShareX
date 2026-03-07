@@ -107,6 +107,7 @@ model Company {
   id                          Int                 @id @default(autoincrement())
   name                        String
   slug                        String              @unique
+  isDefault                   Boolean             @default(false) // Single main company for DR/file share & GDPR; others only for sharing
   country                     String?
   address                     String?
   afm                         String?             @unique // ΑΦΜ (Greek tax ID) – only one per company
@@ -485,4 +486,25 @@ model AuditLog {
 
   company      Company     @relation(fields: [companyId], references: [id])
   actor        User?       @relation("AuditActor", fields: [actorUserId], references: [id])
+}
+
+// ============ DB backups (system-level, Super Admin) ============
+
+enum DbBackupStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model DbBackup {
+  id                 Int            @id @default(autoincrement())
+  filename           String
+  bunnyStoragePath   String
+  sizeBytes          Int
+  status             DbBackupStatus @default(RUNNING)
+  errorMessage       String?        @db.Text
+  startedAt          DateTime      @default(now())
+  completedAt        DateTime?
+
+  @@index([startedAt])
 }

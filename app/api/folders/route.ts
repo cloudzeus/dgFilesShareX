@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canReadFolder } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -22,7 +27,7 @@ export async function GET(req: Request) {
   const user = {
     id: session.user.id,
     role: session.user.role,
-    companyId: session.user.companyId,
+    companyId,
     departmentId: session.user.departmentId,
   };
 
@@ -38,7 +43,7 @@ export async function GET(req: Request) {
   const [folders, files] = await Promise.all([
     prisma.folder.findMany({
       where: {
-        companyId: session.user.companyId,
+        companyId,
         parentFolderId: parentId,
       },
       orderBy: { name: "asc" },
@@ -46,7 +51,7 @@ export async function GET(req: Request) {
     }),
     parentId !== null
       ? prisma.file.findMany({
-          where: { folderId: parentId, companyId: session.user.companyId, deletionStatus: "ACTIVE" },
+          where: { folderId: parentId, companyId, deletionStatus: "ACTIVE" },
           orderBy: { name: "asc" },
           include: { createdBy: { select: { name: true, email: true } } },
         })

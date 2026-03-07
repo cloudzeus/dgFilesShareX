@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canWriteFolder } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import { createAuditLog } from "@/lib/audit";
 import { EventType, TargetType } from "@prisma/client";
 
@@ -11,12 +12,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const companyId = session.user.companyId;
-  if (typeof companyId !== "number" || companyId < 1) {
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
     return NextResponse.json(
-      { error: "No company associated with your account. Cannot create folders." },
+      { error: "No access to main company. Cannot create folders." },
       { status: 403 }
     );
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true },
+  });
+  if (!dbUser) {
+    return NextResponse.json({ error: "User no longer exists. Please sign in again." }, { status: 401 });
   }
 
   let body: { parentFolderId?: number | null; name?: string };

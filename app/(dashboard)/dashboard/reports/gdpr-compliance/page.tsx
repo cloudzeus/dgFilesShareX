@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canViewAudit } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import { el } from "@/lib/i18n";
 import { redirect } from "next/navigation";
 
@@ -8,20 +9,20 @@ export default async function ReportsGdprCompliancePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const canView = canViewAudit(
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  const canView = companyId != null && canViewAudit(
     {
       id: session.user.id,
       role: session.user.role,
-      companyId: session.user.companyId,
+      companyId,
       departmentId: session.user.departmentId,
     },
     "company"
   );
 
-  const companyId = session.user.companyId;
-  const hasCompany = typeof companyId === "number" && companyId > 0;
+  const hasCompany = companyId != null;
 
-  const [policies, fileCounts, retentionCounts] = canView && hasCompany
+  const [policies, fileCounts, retentionCounts] = canView && hasCompany && companyId != null
     ? await Promise.all([
         prisma.retentionPolicy.findMany({
           where: { companyId },

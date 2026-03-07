@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canManagePolicies } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 
 /**
  * List retention policies for the company.
@@ -12,8 +13,13 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "No company context" }, { status: 403 });
+  }
+
   const policies = await prisma.retentionPolicy.findMany({
-    where: { companyId: session.user.companyId },
+    where: { companyId },
     orderBy: { name: "asc" },
   });
 
@@ -62,9 +68,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Name required" }, { status: 400 });
   }
 
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "No company context" }, { status: 403 });
+  }
+
   const policy = await prisma.retentionPolicy.create({
     data: {
-      companyId: session.user.companyId,
+      companyId,
       name,
       description: typeof body.description === "string" ? body.description.trim() || null : null,
       durationDays: body.durationDays != null ? Math.max(0, Number(body.durationDays)) : null,

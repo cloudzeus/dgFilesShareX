@@ -14,17 +14,23 @@ type UserRow = {
   departmentId: number | null;
   isActive: boolean;
   department: { id: number; name: string } | null;
+  companyId?: number;
+  company?: { id: number; name: string };
 };
 
 type DepartmentRow = { id: number; name: string; description: string | null };
+type CompanyRow = { id: number; name: string };
 
 type Props = {
   users: UserRow[];
   departments: DepartmentRow[];
+  companies: CompanyRow[];
+  isSuperAdmin: boolean;
+  defaultCompanyId?: number;
   currentUserId: string;
 };
 
-export function UsersClient({ users, departments, currentUserId }: Props) {
+export function UsersClient({ users, departments, companies, isSuperAdmin, defaultCompanyId, currentUserId }: Props) {
   const router = useRouter();
   const [modal, setModal] = useState<"add" | UserRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -78,6 +84,9 @@ export function UsersClient({ users, departments, currentUserId }: Props) {
           <AdminEmployeeModal
             mode="add"
             departments={departments}
+            companies={isSuperAdmin ? companies : []}
+            isSuperAdmin={isSuperAdmin}
+            defaultCompanyId={defaultCompanyId}
             onClose={() => setModal(null)}
             onSuccess={() => { setModal(null); router.refresh(); }}
           />
@@ -110,6 +119,9 @@ export function UsersClient({ users, departments, currentUserId }: Props) {
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.employeeName}</th>
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.employeeEmail}</th>
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.employeeRole}</th>
+                {isSuperAdmin && (
+                  <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.companiesTitle}</th>
+                )}
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.employeeDepartment}</th>
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">Κατάσταση</th>
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6 w-28">{el.actions}</th>
@@ -121,6 +133,9 @@ export function UsersClient({ users, departments, currentUserId }: Props) {
                   <td className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{u.name ?? "—"}</td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)] md:px-6">{u.email ?? "—"}</td>
                   <td className="px-4 py-3 text-[var(--foreground)] md:px-6">{roleLabel(u.role)}</td>
+                  {isSuperAdmin && (
+                    <td className="px-4 py-3 text-[var(--muted-foreground)] md:px-6">{u.company?.name ?? "—"}</td>
+                  )}
                   <td className="px-4 py-3 text-[var(--muted-foreground)] md:px-6">{u.department?.name ?? "—"}</td>
                   <td className="px-4 py-3 md:px-6">{u.isActive ? "Ενεργός" : "Απενεργοποιημένος"}</td>
                   <td className="px-4 py-3 md:px-6">
@@ -155,6 +170,9 @@ export function UsersClient({ users, departments, currentUserId }: Props) {
         <AdminEmployeeModal
           mode="add"
           departments={departments}
+          companies={isSuperAdmin ? companies : []}
+          isSuperAdmin={isSuperAdmin}
+          defaultCompanyId={defaultCompanyId}
           onClose={() => setModal(null)}
           onSuccess={() => { setModal(null); router.refresh(); }}
         />
@@ -164,6 +182,8 @@ export function UsersClient({ users, departments, currentUserId }: Props) {
           mode="edit"
           initial={modal}
           departments={departments}
+          companies={isSuperAdmin ? companies : []}
+          isSuperAdmin={isSuperAdmin}
           onClose={() => setModal(null)}
           onSuccess={() => { setModal(null); router.refresh(); }}
         />

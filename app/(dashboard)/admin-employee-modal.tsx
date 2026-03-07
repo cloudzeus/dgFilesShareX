@@ -13,25 +13,33 @@ type UserRow = {
   departmentId: number | null;
   isActive: boolean;
   department: { id: number; name: string } | null;
+  companyId?: number;
+  company?: { id: number; name: string };
 };
 
 type DepartmentRow = { id: number; name: string; description: string | null };
+type CompanyRow = { id: number; name: string };
 
 const ROLES = ["EMPLOYEE", "DEPARTMENT_MANAGER", "COMPANY_ADMIN", "AUDITOR", "DPO"] as const;
+const ROLES_SUPER_ADMIN = ["EMPLOYEE", "DEPARTMENT_MANAGER", "COMPANY_ADMIN", "AUDITOR", "DPO", "SUPER_ADMIN"] as const;
 
 type Props = {
   mode: "add" | "edit";
   initial?: UserRow;
   departments: DepartmentRow[];
+  companies?: CompanyRow[];
+  isSuperAdmin?: boolean;
+  defaultCompanyId?: number;
   onClose: () => void;
   onSuccess: () => void;
 };
 
-export function AdminEmployeeModal({ mode, initial, departments, onClose, onSuccess }: Props) {
+export function AdminEmployeeModal({ mode, initial, departments, companies = [], isSuperAdmin = false, defaultCompanyId, onClose, onSuccess }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState(initial?.role ?? "EMPLOYEE");
+  const [companyId, setCompanyId] = useState<string>(initial?.companyId?.toString() ?? (mode === "add" && defaultCompanyId != null ? String(defaultCompanyId) : ""));
   const [departmentId, setDepartmentId] = useState<string>(initial?.departmentId?.toString() ?? "");
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -42,13 +50,16 @@ export function AdminEmployeeModal({ mode, initial, departments, onClose, onSucc
     setError(null);
     setLoading(true);
     try {
-      const body: { name?: string; email?: string; password?: string; role?: string; departmentId?: number | null } = {
+      const body: { name?: string; email?: string; password?: string; role?: string; companyId?: number; departmentId?: number | null } = {
         name: name.trim() || undefined,
         email: email.trim() || undefined,
         role,
         departmentId: departmentId === "" ? null : Number(departmentId) || null,
       };
       if (password) body.password = password;
+      if (isSuperAdmin && companies.length > 0 && companyId !== "") {
+        body.companyId = Number(companyId) || undefined;
+      }
 
       const url = mode === "add" ? "/api/users" : `/api/users/${initial!.id}`;
       const method = mode === "add" ? "POST" : "PATCH";
@@ -170,13 +181,37 @@ export function AdminEmployeeModal({ mode, initial, departments, onClose, onSucc
               className="w-full rounded-lg border border-[var(--outline)] bg-[var(--surface)] px-3 py-2 text-[var(--foreground)]"
               style={{ fontSize: "var(--text-body2)" }}
             >
-              {ROLES.map((r) => (
+              {(isSuperAdmin ? ROLES_SUPER_ADMIN : ROLES).map((r) => (
                 <option key={r} value={r}>
                   {roleLabel(r)}
                 </option>
               ))}
             </select>
           </div>
+          {isSuperAdmin && companies.length > 0 && (
+            <div>
+              <label htmlFor="emp-company" className="mb-1 block font-medium text-[var(--muted-foreground)]" style={{ fontSize: "var(--text-caption)" }}>
+                {el.companiesTitle}
+              </label>
+              <select
+                id="emp-company"
+                value={companyId}
+                onChange={(e) => {
+                  setCompanyId(e.target.value);
+                  setDepartmentId("");
+                }}
+                className="w-full rounded-lg border border-[var(--outline)] bg-[var(--surface)] px-3 py-2 text-[var(--foreground)]"
+                style={{ fontSize: "var(--text-body2)" }}
+              >
+                <option value="">—</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label htmlFor="emp-dept" className="mb-1 block font-medium text-[var(--muted-foreground)]" style={{ fontSize: "var(--text-caption)" }}>
               {el.employeeDepartment}

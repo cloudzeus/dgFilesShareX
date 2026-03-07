@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 
 function canManageDepartments(role: string): boolean {
   return role === "SUPER_ADMIN" || role === "COMPANY_ADMIN";
 }
 
 /**
- * PATCH: Update department. Super Admin / Company Admin only.
+ * PATCH: Update department (default company only). Super Admin / Company Admin only.
  * Body: { name?, description? }
  */
 export async function PATCH(
@@ -21,7 +22,10 @@ export async function PATCH(
   if (!canManageDepartments(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const companyId = session.user.companyId as number;
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const id = Number((await params).id);
   if (Number.isNaN(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });

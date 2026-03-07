@@ -9,6 +9,7 @@ type CompanyListItem = {
   id: number;
   name: string;
   slug: string;
+  isDefault: boolean;
   country: string | null;
   address: string | null;
   afm: string | null;
@@ -96,6 +97,7 @@ export function CompaniesClient() {
     const afm = (form.querySelector('[name="afm"]') as HTMLInputElement)?.value?.trim() || null;
     const activity = (form.querySelector('[name="activity"]') as HTMLInputElement)?.value?.trim() || null;
     const bunnyStorageZoneName = (form.querySelector('[name="bunnyStorageZoneName"]') as HTMLInputElement)?.value?.trim() || null;
+    const isDefault = (form.querySelector('[name="isDefault"]') as HTMLInputElement)?.checked ?? false;
     const dpoUserId = (form.querySelector('[name="dpoUserId"]') as HTMLSelectElement)?.value || null;
     const securityOfficerUserId = (form.querySelector('[name="securityOfficerUserId"]') as HTMLSelectElement)?.value || null;
     setSaving(true);
@@ -112,6 +114,7 @@ export function CompaniesClient() {
           afm,
           activity,
           bunnyStorageZoneName,
+          isDefault,
           dpoUserId: dpoUserId === "" ? null : dpoUserId,
           securityOfficerUserId: securityOfficerUserId === "" ? null : securityOfficerUserId,
         }),
@@ -180,6 +183,7 @@ export function CompaniesClient() {
               <tr className="border-b border-[var(--outline)] bg-[var(--muted)]/50">
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.companyName}</th>
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.companySlug}</th>
+                <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.companyDefaultCompany}</th>
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.companyCountry}</th>
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.roleUsersCount}</th>
                 <th className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{el.adminDepartments}</th>
@@ -194,6 +198,7 @@ export function CompaniesClient() {
                 >
                   <td className="px-4 py-3 font-medium text-[var(--foreground)] md:px-6">{c.name}</td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)] md:px-6">{c.slug}</td>
+                  <td className="px-4 py-3 text-[var(--muted-foreground)] md:px-6">{c.isDefault ? "Ναι" : "—"}</td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)] md:px-6">{c.country ?? "—"}</td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)] md:px-6">{c._count.users}</td>
                   <td className="px-4 py-3 text-[var(--muted-foreground)] md:px-6">{c._count.departments}</td>
@@ -240,6 +245,18 @@ export function CompaniesClient() {
                 className="w-full rounded-lg border border-[var(--outline)] bg-[var(--surface)] px-3 py-2 text-[var(--foreground)]"
                 style={{ fontSize: "var(--text-body2)" }}
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="isDefault"
+                name="isDefault"
+                type="checkbox"
+                defaultChecked={detail.isDefault}
+                className="h-4 w-4 rounded border-[var(--outline)] text-[var(--primary)]"
+              />
+              <label htmlFor="isDefault" className="font-medium text-[var(--muted-foreground)]" style={{ fontSize: "var(--text-caption)" }}>
+                {el.companyDefaultCompany}
+              </label>
             </div>
             <div>
               <label className="mb-1 block font-medium text-[var(--muted-foreground)]" style={{ fontSize: "var(--text-caption)" }}>

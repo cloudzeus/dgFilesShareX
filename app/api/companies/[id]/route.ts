@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { clearDefaultCompanyCache } from "@/lib/default-company";
 
 /**
  * GET: Company details. Super Admin only.
@@ -77,6 +78,7 @@ export async function PATCH(
     address?: string | null;
     afm?: string | null;
     activity?: string | null;
+    isDefault?: boolean;
     bunnyStorageZoneName?: string | null;
     bunnyStorageAccessKey?: string | null;
     defaultDataRetentionPolicyId?: number | null;
@@ -120,6 +122,17 @@ export async function PATCH(
   if (body.defaultDataRetentionPolicyId !== undefined) updateData.defaultDataRetentionPolicyId = body.defaultDataRetentionPolicyId ?? null;
   if (body.dpoUserId !== undefined) updateData.dpoUserId = body.dpoUserId === "" ? null : body.dpoUserId;
   if (body.securityOfficerUserId !== undefined) updateData.securityOfficerUserId = body.securityOfficerUserId === "" ? null : body.securityOfficerUserId;
+  if (body.isDefault === true) {
+    await prisma.company.updateMany({
+      where: { id: { not: id } },
+      data: { isDefault: false },
+    });
+    updateData.isDefault = true;
+    clearDefaultCompanyCache();
+  } else if (body.isDefault === false) {
+    updateData.isDefault = false;
+    clearDefaultCompanyCache();
+  }
 
   const company = await prisma.company.update({
     where: { id },
@@ -163,6 +176,9 @@ export async function DELETE(
   });
   if (!existing) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  }
+  if (existing.isDefault) {
+    return NextResponse.json({ error: "Cannot delete the default company. Set another company as default first." }, { status: 400 });
   }
 
   await prisma.$transaction(async (tx) => {

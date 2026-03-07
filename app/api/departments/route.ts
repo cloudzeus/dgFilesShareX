@@ -1,25 +1,27 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 
 function canManageDepartments(role: string): boolean {
   return role === "SUPER_ADMIN" || role === "COMPANY_ADMIN";
 }
 
 /**
- * GET: List departments for the current user's company.
+ * GET: List departments for the default company only.
  */
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!session.user.companyId) {
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const departments = await prisma.department.findMany({
-    where: { companyId: session.user.companyId },
+    where: { companyId },
     orderBy: { name: "asc" },
     select: { id: true, name: true, description: true },
   });
@@ -28,7 +30,7 @@ export async function GET() {
 }
 
 /**
- * POST: Create department. Super Admin / Company Admin only.
+ * POST: Create department (default company only). Super Admin / Company Admin only.
  * Body: { name, description? }
  */
 export async function POST(request: Request) {
@@ -39,7 +41,10 @@ export async function POST(request: Request) {
   if (!canManageDepartments(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const companyId = session.user.companyId as number;
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   let body: { name: string; description?: string };
   try {

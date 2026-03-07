@@ -18,6 +18,7 @@ import {
   HiOutlineChevronDown,
   HiOutlineDocumentText,
   HiOutlineUserGroup,
+  HiOutlineCircleStack,
 } from "react-icons/hi2";
 
 const reportSubLinks = [
@@ -43,6 +44,8 @@ const baseNavLinksAfterReports = [
 ];
 
 const companiesNavLink = { href: "/dashboard/companies", label: el.companiesTitle, Icon: HiOutlineBuildingOffice2 };
+const dbBackupsNavLink = { href: "/dashboard/db-backups", label: el.navDbBackups, Icon: HiOutlineCircleStack };
+const userManagementNavLink = { href: "/dashboard/users", label: el.navUserManagement, Icon: HiOutlineUserGroup };
 const employeesNavLink = { href: "/dashboard/users", label: el.navEmployees, Icon: HiOutlineUserGroup };
 
 export function DashboardNav({ isSuperAdmin = false, showEmployeesLink = false }: { isSuperAdmin?: boolean; showEmployeesLink?: boolean }) {
@@ -132,14 +135,32 @@ export function DashboardNav({ isSuperAdmin = false, showEmployeesLink = false }
       ))}
 
       {isSuperAdmin && (
-        <Link
-          href={companiesNavLink.href}
-          className={linkClass(companiesNavLink.href)}
-          style={{ fontSize: "var(--text-body2)" }}
-        >
-          <companiesNavLink.Icon className="h-5 w-5 shrink-0 opacity-80" aria-hidden />
-          <span>{companiesNavLink.label}</span>
-        </Link>
+        <>
+          <Link
+            href={companiesNavLink.href}
+            className={linkClass(companiesNavLink.href)}
+            style={{ fontSize: "var(--text-body2)" }}
+          >
+            <companiesNavLink.Icon className="h-5 w-5 shrink-0 opacity-80" aria-hidden />
+            <span>{companiesNavLink.label}</span>
+          </Link>
+          <Link
+            href={userManagementNavLink.href}
+            className={linkClass(userManagementNavLink.href)}
+            style={{ fontSize: "var(--text-body2)" }}
+          >
+            <userManagementNavLink.Icon className="h-5 w-5 shrink-0 opacity-80" aria-hidden />
+            <span>{userManagementNavLink.label}</span>
+          </Link>
+          <Link
+            href={dbBackupsNavLink.href}
+            className={linkClass(dbBackupsNavLink.href)}
+            style={{ fontSize: "var(--text-body2)" }}
+          >
+            <dbBackupsNavLink.Icon className="h-5 w-5 shrink-0 opacity-80" aria-hidden />
+            <span>{dbBackupsNavLink.label}</span>
+          </Link>
+        </>
       )}
     </nav>
   );

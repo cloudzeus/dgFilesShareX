@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import type { UserRole } from "@prisma/client";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 
 function canManageUsers(role: string): boolean {
   return role === "SUPER_ADMIN" || role === "COMPANY_ADMIN";
@@ -10,7 +11,8 @@ function canManageUsers(role: string): boolean {
 
 /**
  * PATCH: Update user (employee). Super Admin / Company Admin only.
- * Body: { name?, email?, password?, role?, departmentId?, isActive? }
+ * Body: { name?, email?, password?, role?, departmentId?, isActive?, companyId? }
+ * companyId only allowed for SUPER_ADMIN.
  */
 export async function PATCH(
   request: Request,
@@ -23,11 +25,13 @@ export async function PATCH(
   if (!canManageUsers(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const companyId = session.user.companyId as number;
   const { id } = await params;
 
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const effectiveCompanyId = await getEffectiveCompanyIdForMainFeatures(session);
+
   const existing = await prisma.user.findFirst({
-    where: { id, companyId },
+    where: isSuperAdmin ? { id } : { id, companyId: effectiveCompanyId! },
   });
   if (!existing) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -40,6 +44,7 @@ export async function PATCH(
     role?: UserRole;
     departmentId?: number | string | null;
     isActive?: boolean;
+    companyId?: number;
   };
   try {
     body = await request.json();
@@ -52,6 +57,18 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
+  const targetCompanyId = body.companyId !== undefined && isSuperAdmin ? body.companyId : existing.companyId;
+
+  if (body.companyId !== undefined && isSuperAdmin) {
+    const companyExists = await prisma.company.findUnique({
+      where: { id: body.companyId },
+      select: { id: true },
+    });
+    if (!companyExists) {
+      return NextResponse.json({ error: "Company not found" }, { status: 400 });
+    }
+  }
+
   if (body.departmentId !== undefined) {
     const raw = body.departmentId;
     if (raw === "" || raw === null || raw === 0) {
@@ -62,7 +79,7 @@ export async function PATCH(
         (body as { departmentId: null }).departmentId = null;
       } else {
         const dept = await prisma.department.findFirst({
-          where: { id: deptId, companyId },
+          where: { id: deptId, companyId: targetCompanyId },
         });
         if (!dept) {
           return NextResponse.json({ error: "Department not found or not in company" }, { status: 400 });
@@ -89,6 +106,7 @@ export async function PATCH(
     role?: UserRole;
     departmentId?: number | null;
     isActive?: boolean;
+    companyId?: number;
   } = {};
 
   if (body.name !== undefined) updateData.name = body.name?.trim() || null;
@@ -102,6 +120,7 @@ export async function PATCH(
     updateData.departmentId = d === null || d === "" ? null : Number(d);
   }
   if (body.isActive !== undefined) updateData.isActive = body.isActive;
+  if (body.companyId !== undefined && isSuperAdmin) updateData.companyId = body.companyId;
 
   const user = await prisma.user.update({
     where: { id },
@@ -135,15 +154,17 @@ export async function DELETE(
   if (!canManageUsers(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const companyId = session.user.companyId as number;
   const { id } = await params;
 
   if (id === session.user.id) {
     return NextResponse.json({ error: "Cannot deactivate yourself" }, { status: 400 });
   }
 
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const effectiveCompanyId = await getEffectiveCompanyIdForMainFeatures(session);
+
   const existing = await prisma.user.findFirst({
-    where: { id, companyId },
+    where: isSuperAdmin ? { id } : { id, companyId: effectiveCompanyId! },
   });
   if (!existing) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });

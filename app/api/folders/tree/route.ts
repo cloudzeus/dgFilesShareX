@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canReadFolder } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import type { Folder } from "@prisma/client";
 
 type FolderNode = {
@@ -17,16 +18,20 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const user = {
     id: session.user.id,
     role: session.user.role,
-    companyId: session.user.companyId,
+    companyId,
     departmentId: session.user.departmentId,
   };
 
   const allFolders = await prisma.folder.findMany({
-    where: { companyId: session.user.companyId },
+    where: { companyId },
     orderBy: { name: "asc" },
     select: { id: true, name: true, path: true, parentFolderId: true, isDepartmentRoot: true, departmentId: true, createdByUserId: true },
   });

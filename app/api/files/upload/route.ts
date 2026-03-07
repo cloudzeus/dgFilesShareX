@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canWriteFolder } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import { uploadFile } from "@/lib/bunny";
 import { scanFile } from "@/lib/malware";
 import { runClassification } from "@/lib/classification";
@@ -30,18 +31,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Valid folderId required" }, { status: 400 });
   }
 
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  if (companyId == null) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },
     include: { company: true },
   });
-  if (!folder || folder.companyId !== session.user.companyId) {
+  if (!folder || folder.companyId !== companyId) {
     return NextResponse.json({ error: "Folder not found" }, { status: 404 });
   }
 
   const user = {
     id: session.user.id,
     role: session.user.role,
-    companyId: session.user.companyId,
+    companyId,
     departmentId: session.user.departmentId,
   };
   if (!canWriteFolder(user, folder)) {

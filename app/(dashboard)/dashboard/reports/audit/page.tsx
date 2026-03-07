@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canViewAudit } from "@/lib/rbac";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import { el, eventTypeLabel } from "@/lib/i18n";
 import { redirect } from "next/navigation";
 import { ReportsAuditFilter } from "../reports-audit-filter";
@@ -18,30 +19,31 @@ export default async function ReportsAuditPage({
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const params = await searchParams;
-  const eventTypeFilter = typeof params.eventType === "string" && params.eventType.trim() ? params.eventType.trim() : null;
-
-  const canView = canViewAudit(
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  const canView = companyId != null && canViewAudit(
     {
       id: session.user.id,
       role: session.user.role,
-      companyId: session.user.companyId,
+      companyId,
       departmentId: session.user.departmentId,
     },
     "company"
   );
 
+  const params = await searchParams;
+  const eventTypeFilter = typeof params.eventType === "string" && params.eventType.trim() ? params.eventType.trim() : null;
+
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - RECENT_DAYS);
 
   const [stats, auditLogs] = await Promise.all([
-    canView
+    canView && companyId != null
       ? Promise.all([
-          prisma.file.count({ where: { companyId: session.user.companyId, deletionStatus: "ACTIVE" } }),
-          prisma.folder.count({ where: { companyId: session.user.companyId } }),
+          prisma.file.count({ where: { companyId, deletionStatus: "ACTIVE" } }),
+          prisma.folder.count({ where: { companyId } }),
           prisma.auditLog.count({
             where: {
-              companyId: session.user.companyId,
+              companyId,
               eventType: "FILE_UPLOAD",
               createdAt: { gte: sevenDaysAgo },
             },
@@ -52,10 +54,10 @@ export default async function ReportsAuditPage({
           recentUploads,
         }))
       : Promise.resolve({ totalFiles: 0, totalFolders: 0, recentUploads: 0 }),
-    canView
+    canView && companyId != null
       ? prisma.auditLog.findMany({
           where: {
-            companyId: session.user.companyId,
+            companyId,
             ...(eventTypeFilter ? { eventType: eventTypeFilter as import("@prisma/client").EventType } : {}),
           },
           orderBy: { createdAt: "desc" },

@@ -40,7 +40,29 @@ Seed creates demo users you can use to log in:
 
 Change or add users in `prisma/seed.ts` and re-run `pnpm run db:seed` as needed.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Database backups (Super Admin)
+
+Daily full dumps of all MySQL databases are supported: **mysqldump → gzip → Bunny CDN**, with records stored in the app.
+
+- **Run once (CLI):** From project root (with `.env` containing `DATABASE_URL` and Bunny vars):
+  ```bash
+  pnpm run db:backup
+  ```
+  Requires `mysqldump` on `PATH` (e.g. MySQL client tools). Backups are stored under `db-backups/YYYY-MM/` in your Bunny storage zone.
+
+- **Run from dashboard:** Log in as **Super Admin** → **Αντίγραφα ΒΔ** (DB Backups) → **Εκτέλεση αντιγράφου τώρα**.
+
+- **Daily cron:** Run the script from a cron job (same machine that has `mysqldump` and network access to DB and Bunny), e.g.:
+  ```bash
+  0 3 * * * cd /path/to/app && pnpm run db:backup
+  ```
+  Or call the API with a secret (no browser session): set `BACKUP_CRON_SECRET` in `.env`, then:
+  ```bash
+  curl -X POST -H "X-Backup-Secret: $BACKUP_CRON_SECRET" "$NEXT_PUBLIC_SITE_URL/api/admin/db-backup"
+  ```
+  The API must be reachable (e.g. production URL); the script is better for cron when the job runs on the same server as the app.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel. [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
 

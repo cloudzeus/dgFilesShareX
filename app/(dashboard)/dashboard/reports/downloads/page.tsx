@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveCompanyIdForMainFeatures } from "@/lib/default-company";
 import { el } from "@/lib/i18n";
 import { redirect } from "next/navigation";
 
@@ -9,10 +10,10 @@ export default async function ReportsDownloadsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const companyId = session.user.companyId;
-  const hasCompany = typeof companyId === "number" && companyId > 0;
+  const companyId = await getEffectiveCompanyIdForMainFeatures(session);
+  const hasCompany = companyId != null;
 
-  const accesses = hasCompany
+  const accesses = hasCompany && companyId != null
     ? await prisma.fileShareAccess.findMany({
         where: {
           share: { companyId },
